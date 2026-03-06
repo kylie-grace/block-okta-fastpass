@@ -1,11 +1,15 @@
 // Inject into main page world so window.fetch override actually intercepts Okta's calls.
 (function () {
-  const script = document.createElement('script');
-  script.textContent = `(function () {
+  chrome.storage.local.get({ enabled: true, domain: '' }, function (cfg) {
+    if (!cfg.enabled || !cfg.domain) return;
+    if (window.location.hostname !== cfg.domain) return;
+
+    const script = document.createElement('script');
+    script.textContent = `(function () {
   'use strict';
 
   let capturedStateHandle = null;
-  let capturedIdxOrigin = null;  // e.g. "https://okta.umich.edu"
+  let capturedIdxOrigin = null;  // e.g. "https://your-org.okta.com"
 
   function tryCapture(json, urlStr) {
     if (json && json.stateHandle) {
@@ -120,6 +124,7 @@
   console.log('[FastPass Blocker] active (main world)');
 })();`;
 
-  (document.head || document.documentElement).appendChild(script);
-  script.remove();
+    (document.head || document.documentElement).appendChild(script);
+    script.remove();
+  });
 })();

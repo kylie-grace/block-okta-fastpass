@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Block Okta FastPass",
-  "version": "1.0",
+  "version": "1.1",
   "description": "Prevents Okta FastPass from auto-signing in on service account profiles. Shows the authenticator picker instead.",
   "icons": {
     "16": "icons/icon16.png",
@@ -17,9 +17,9 @@
     "default_popup": "popup.html",
     "default_title": "Block Okta FastPass"
   },
-  "permissions": ["webRequest", "webRequestBlocking", "<all_urls>", "tabs"],
+  "permissions": ["webRequest", "webRequestBlocking", "<all_urls>", "tabs", "storage"],
   "content_scripts": [{
-    "matches": ["https://okta.umich.edu/*"],
+    "matches": ["https://*/*"],
     "js": ["content.js"],
     "run_at": "document_start",
     "all_frames": true
