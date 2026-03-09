@@ -1,8 +1,18 @@
-# Block Okta FastPass — Brave/Chrome Extension
+# Block Okta FastPass — Chrome/Brave Extension
 
-A minimal browser extension for anyone who manages **service account profiles** in Brave or Chrome. It prevents Okta FastPass (Okta Verify on macOS) from automatically signing in with your primary device identity, and shows the standard authenticator picker instead.
+A minimal browser extension for anyone who manages **service account profiles** in Chrome or Brave. It prevents Okta FastPass (Okta Verify on macOS) from automatically signing in with your primary device identity, and shows the standard authenticator picker instead.
 
 Works with any Okta installation — configure your organization's Okta domain after installing.
+
+---
+
+## Screenshots
+
+<p align="center">
+  <img src="screenshots/popup.png" alt="Extension popup showing status, domain config, and controls" width="300">
+  &nbsp;&nbsp;&nbsp;
+  <img src="screenshots/extension-manager.png" alt="Extension loaded in Chrome extension manager" width="340">
+</p>
 
 ---
 
@@ -32,7 +42,7 @@ The extension only runs on the domain you configure. It does **not** touch any o
 
 1. Download or clone this folder to your local disk.
 
-2. Open `brave://extensions` (or `chrome://extensions`).
+2. Open `chrome://extensions` (or `brave://extensions`).
 
 3. Enable **Developer mode** using the toggle in the top-right corner.
 
@@ -79,17 +89,17 @@ The status badge shows:
 
 **Poll endpoint moved?**
 
-- Open DevTools → Network on the Okta login page and filter for `poll`. Note the new URL, update `content.js` to match.
+- Open DevTools → Network on the Okta login page and filter for `poll`. Note the new URL, update `blocker.js` to match.
 
 ---
 
 ## How It Works (Technical)
 
-Okta's login widget runs entirely in JavaScript on the page. Content scripts in Chromium run in an isolated JavaScript world — they cannot intercept `window.fetch` calls made by the page.
+Okta's login widget runs entirely in JavaScript on the page. The extension's fetch interception must run in the page's main JavaScript world — not in the isolated content script world — to intercept Okta's `window.fetch` calls.
 
-To work around this, the extension injects a `<script>` tag directly into the page's main world at `document_start` (before Okta's scripts load). This script overrides `window.fetch` globally, intercepting all fetch calls made by the Okta widget.
+**v1.2 approach (Manifest V3):** A background service worker listens for navigation events matching your configured Okta domain. When a match is found, it uses `chrome.scripting.executeScript` with `world: "MAIN"` and `injectImmediately: true` to inject `blocker.js` directly into the page's main world. Because this injects from an extension file (not inline code), it bypasses the page's Content Security Policy entirely.
 
-The fetch override:
+The fetch override in `blocker.js`:
 - Rejects fetch calls to `127.0.0.1` and `*.authenticatorlocalprod.com` (FastPass local probe)
 - Captures the `stateHandle` and Okta origin from passthrough `introspect`/`identify` responses
 - On poll intercept, POSTs to `/idp/idx/authenticators/poll/cancel` (graceful Okta cancel)
@@ -104,9 +114,13 @@ The fetch override:
 block-okta-fastpass/
 ├── README.md
 ├── manifest.json
-├── content.js
+├── background.js     ← service worker: checks config, injects blocker into main world
+├── blocker.js        ← fetch override IIFE, runs in page's main JS world
 ├── popup.html
 ├── popup.js
+├── screenshots/
+│   ├── popup.png
+│   └── extension-manager.png
 └── icons/
     ├── icon16.png
     ├── icon48.png
@@ -133,6 +147,6 @@ This extension is safe to distribute publicly. Here's why:
 
 ## Notes
 
-- This extension uses Manifest V2 (not V3). Brave continues to support MV2. MV3's `declarativeNetRequest` API cannot block loopback/localhost URLs in Brave, which is required for this approach.
+- This extension uses Manifest V3 and is compatible with Chrome and Brave.
 - The extension captures the Okta `stateHandle` and origin URL at runtime from live Okta responses. No credentials, tokens, or personal data are stored or transmitted.
 - The domain you configure is stored locally in `chrome.storage.local` and never leaves your browser.
