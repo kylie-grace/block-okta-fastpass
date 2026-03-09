@@ -1,6 +1,9 @@
 (function () {
   'use strict';
 
+  if (window.__fastpassBlockerInstalled) return;
+  window.__fastpassBlockerInstalled = true;
+
   let capturedStateHandle = null;
   let capturedIdxOrigin = null;  // e.g. "https://your-org.okta.com"
 
@@ -55,8 +58,11 @@
     if (urlStr.includes('/idp/idx/authenticators/poll') && !urlStr.includes('/cancel')) {
       console.log('[FastPass Blocker] Poll intercepted');
       if (!capturedStateHandle || !capturedIdxOrigin) {
-        console.warn('[FastPass Blocker] Missing stateHandle/origin — passing poll through');
-        return _fetch.apply(this, arguments);
+        console.warn('[FastPass Blocker] Missing stateHandle/origin — blocking poll with synthetic error');
+        return new Response(
+          JSON.stringify({ error: 'FastPass unavailable', errorCode: 'E0000095' }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
       }
 
       const body = JSON.stringify({ stateHandle: capturedStateHandle });

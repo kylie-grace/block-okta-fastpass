@@ -30,7 +30,8 @@ function updateStatus(enabled, domain) {
   chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
     const tab = tabs && tabs[0];
     const url = tab && tab.url;
-    const onDomain = url && url.includes(domain);
+    let onDomain = false;
+    try { onDomain = url && new URL(url).hostname === domain; } catch (e) {}
 
     if (onDomain) {
       dot.classList.add('dot-active');
