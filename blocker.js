@@ -1,11 +1,4 @@
-// Inject into main page world so window.fetch override actually intercepts Okta's calls.
 (function () {
-  chrome.storage.local.get({ enabled: true, domain: '' }, function (cfg) {
-    if (!cfg.enabled || !cfg.domain) return;
-    if (window.location.hostname !== cfg.domain) return;
-
-    const script = document.createElement('script');
-    script.textContent = `(function () {
   'use strict';
 
   let capturedStateHandle = null;
@@ -72,7 +65,7 @@
         'Accept': 'application/ion+json; okta-version=1.0.0',
       };
 
-      // Attempt 1: poll/cancel (Okta's graceful FastPass exit — may be blocked by Shields)
+      // Attempt 1: poll/cancel (Okta's graceful FastPass exit)
       try {
         const cancelUrl = capturedIdxOrigin + '/idp/idx/authenticators/poll/cancel';
         console.log('[FastPass Blocker] Trying poll/cancel:', cancelUrl);
@@ -85,7 +78,7 @@
         console.warn('[FastPass Blocker] poll/cancel blocked/failed:', e.message, '— trying main cancel');
       }
 
-      // Attempt 2: /idp/idx/cancel (resets the IDX transaction — URL has no "poll" so less likely to be blocked)
+      // Attempt 2: /idp/idx/cancel (resets the IDX transaction)
       try {
         const mainCancelUrl = capturedIdxOrigin + '/idp/idx/cancel';
         console.log('[FastPass Blocker] Trying main cancel:', mainCancelUrl);
@@ -99,7 +92,6 @@
       }
 
       // Both failed — return a synthetic IDX response that triggers Okta's error UI
-      // (safer than crashing the state machine)
       console.error('[FastPass Blocker] All cancel attempts failed — returning synthetic error state');
       return new Response(
         JSON.stringify({
@@ -122,9 +114,4 @@
   };
 
   console.log('[FastPass Blocker] active (main world)');
-})();`;
-
-    (document.head || document.documentElement).appendChild(script);
-    script.remove();
-  });
 })();
